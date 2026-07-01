@@ -52,6 +52,8 @@ import "./tests/push/event-source.test.js";
 import "./tests/addressbook/addressbook-get.test.js";
 import "./tests/addressbook/addressbook-changes.test.js";
 import "./tests/addressbook/addressbook-set.test.js";
+import "./tests/contacts/contactcard-get.test.js";
+import "./tests/contacts/contactcard-changes.test.js";
 
 async function main() {
   const { values } = parseArgs({

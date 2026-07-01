@@ -6,7 +6,7 @@ import type { Card } from "../types/jmap-contacts.js";
 // mail-only server is entirely unaffected.
 
 /** Stable, human-readable uids so `uid` / `hasMember` filters are deterministic. */
-const UID = {
+export const SEED_UID = {
   alice: "urn:example:contacts:alice",
   bob: "urn:example:contacts:bob",
   carol: "urn:example:contacts:carol",
@@ -152,12 +152,12 @@ export async function seedContacts(ctx: TestContext): Promise<void> {
   const other = ctx.addressBookIds.bookOther;
 
   // Cards, created one at a time and in this order so timestamps separate.
-  const specs: Array<{ key: keyof typeof UID; book: string; card: Card }> = [
+  const specs: Array<{ key: keyof typeof SEED_UID; book: string; card: Card }> = [
     {
       key: "alice",
       book: main,
       card: buildCard({
-        uid: UID.alice,
+        uid: SEED_UID.alice,
         kind: "individual",
         full: "Alice Anderson",
         given: "Alice",
@@ -172,7 +172,7 @@ export async function seedContacts(ctx: TestContext): Promise<void> {
       key: "bob",
       book: main,
       card: buildCard({
-        uid: UID.bob,
+        uid: SEED_UID.bob,
         kind: "individual",
         full: "Bob Baker Croft",
         given: "Bob",
@@ -186,7 +186,7 @@ export async function seedContacts(ctx: TestContext): Promise<void> {
       key: "carol",
       book: main,
       card: buildCard({
-        uid: UID.carol,
+        uid: SEED_UID.carol,
         kind: "individual",
         full: "Carol Jones",
         given: "Carol",
@@ -198,17 +198,17 @@ export async function seedContacts(ctx: TestContext): Promise<void> {
     {
       key: "dave",
       book: other,
-      card: buildCard({ uid: UID.dave, kind: "individual", full: "Dave Doyle", given: "Dave", surname: "Doyle" }),
+      card: buildCard({ uid: SEED_UID.dave, kind: "individual", full: "Dave Doyle", given: "Dave", surname: "Doyle" }),
     },
     {
       key: "team",
       book: main,
-      card: buildCard({ uid: UID.team, kind: "group", full: "Project Team", members: [UID.alice, UID.bob] }),
+      card: buildCard({ uid: SEED_UID.team, kind: "group", full: "Project Team", members: [SEED_UID.alice, SEED_UID.bob] }),
     },
     {
       key: "minimal",
       book: main,
-      card: buildCard({ uid: UID.minimal }),
+      card: buildCard({ uid: SEED_UID.minimal }),
     },
   ];
 
