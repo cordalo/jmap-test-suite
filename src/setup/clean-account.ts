@@ -1,4 +1,5 @@
 import type { TestContext } from "../runner/test-context.js";
+import { countContacts, forceCleanContacts } from "./seed-contacts.js";
 
 /**
  * Ensure the account is empty. If not empty and force=true, delete everything.
@@ -41,20 +42,25 @@ export async function cleanAccount(
   });
   const emailCount = (emailResult.total as number) ?? 0;
 
-  const hasData = customMailboxes.length > 0 || emailCount > 0;
+  // Contacts objects also make the account "not empty" (no-op if not contacts-capable).
+  const contactsCount = await countContacts(ctx);
+
+  const hasData = customMailboxes.length > 0 || emailCount > 0 || contactsCount > 0;
 
   if (hasData && !force) {
     throw new Error(
-      `Account is not empty (${emailCount} emails, ${customMailboxes.length} custom mailboxes). ` +
-        `Use -f to force-delete existing data.`
+      `Account is not empty (${emailCount} emails, ${customMailboxes.length} custom mailboxes, ` +
+        `${contactsCount} contacts objects). Use -f to force-delete existing data.`
     );
   }
 
   if (hasData && force) {
     process.stderr.write(
-      `Force-cleaning: ${emailCount} emails, ${customMailboxes.length} custom mailboxes\n`
+      `Force-cleaning: ${emailCount} emails, ${customMailboxes.length} custom mailboxes, ` +
+        `${contactsCount} contacts objects\n`
     );
     await forceClean(ctx, mailboxes);
+    await forceCleanContacts(ctx);
   } else {
     process.stderr.write("Account is clean.\n");
   }

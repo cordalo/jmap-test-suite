@@ -6,7 +6,10 @@ import { TestContext } from "./test-context.js";
 import { getTests, type TestDescriptor } from "./test-registry.js";
 import { cleanAccount } from "../setup/clean-account.js";
 import { seedData } from "../setup/seed-data.js";
+import { seedContacts } from "../setup/seed-contacts.js";
 import { teardown } from "../setup/teardown.js";
+import { hasCapability, getAccountId, findCrossAccountId } from "../client/session.js";
+import { CONTACTS_CAPABILITY } from "../types/jmap-contacts.js";
 import { printProgress, printSummaryLine } from "../reporter/console-reporter.js";
 import { createSmeeChannel } from "../helpers/smee.js";
 
@@ -54,6 +57,30 @@ export async function runTests(options: RunOptions): Promise<TestResult[]> {
   } else {
     process.stderr.write(
       "⚠ No cross-account access — primary user has only one mail account; cross-account tests will skip\n"
+    );
+  }
+
+  // Resolve the contacts account (may differ from mail) and a contacts-capable
+  // cross-account for ContactCard/copy. Dedicated field — NOT crossAccountId,
+  // which is mail-capable and consumed by email-copy/blob-copy.
+  let contactsAccountId: string | undefined;
+  let contactsCrossAccountId: string | undefined;
+  if (hasCapability(client.session, CONTACTS_CAPABILITY)) {
+    contactsAccountId = getAccountId(client.session, CONTACTS_CAPABILITY);
+    contactsCrossAccountId = findCrossAccountId(
+      client.session,
+      CONTACTS_CAPABILITY,
+      contactsAccountId
+    );
+    process.stderr.write(
+      `Contacts: capability present, account ${contactsAccountId}` +
+        (contactsCrossAccountId
+          ? `, cross-account ${contactsCrossAccountId} (ContactCard/copy)\n`
+          : ` (no contacts cross-account — ContactCard/copy will skip)\n`)
+    );
+  } else {
+    process.stderr.write(
+      "⚠ No contacts capability — AddressBook/ContactCard tests will skip\n"
     );
   }
 
@@ -109,6 +136,12 @@ export async function runTests(options: RunOptions): Promise<TestResult[]> {
   if (smeeChannel) {
     ctx.smeeChannel = smeeChannel;
   }
+  if (contactsAccountId) {
+    ctx.contactsAccountId = contactsAccountId;
+  }
+  if (contactsCrossAccountId) {
+    ctx.contactsCrossAccountId = contactsCrossAccountId;
+  }
 
   // Clean account
   process.stderr.write("\n--- Cleaning account ---\n");
@@ -117,6 +150,7 @@ export async function runTests(options: RunOptions): Promise<TestResult[]> {
   // Seed test data
   process.stderr.write("\n--- Seeding test data ---\n");
   await seedData(ctx);
+  await seedContacts(ctx);
 
   // Run tests
   process.stderr.write(`\n--- Running ${allTests.length} tests ---\n\n`);
@@ -184,6 +218,34 @@ export async function runTests(options: RunOptions): Promise<TestResult[]> {
 
     results.push(result);
     printProgress(i + 1, allTests.length, result, options.failOnly);
+  }
+
+  // Guard (review B2): a contacts-capable server must actually EXECUTE the
+  // contacts surface. If the capability is present but every registered contacts
+  // test skipped, a green run would be indistinguishable from an account/
+  // capability/`using` misconfig — so fail the run explicitly.
+  const contactsResults = results.filter(
+    (r) => r.testId.startsWith("contacts/") || r.testId.startsWith("addressbook/")
+  );
+  if (ctx.contactsAccountId && contactsResults.length > 0) {
+    const executed = contactsResults.filter((r) => r.status !== "skip").length;
+    if (executed === 0) {
+      process.stderr.write(
+        `\n✗ Contacts capability present but all ${contactsResults.length} contacts tests skipped — failing the run.\n`
+      );
+      results.push({
+        testId: "contacts/_executed-guard",
+        name: "Contacts surface must execute against a contacts-capable server",
+        rfc: "RFC9610",
+        section: "runner",
+        required: true,
+        status: "fail",
+        durationMs: 0,
+        error:
+          `Server advertises ${CONTACTS_CAPABILITY} but all ${contactsResults.length} contacts/addressbook ` +
+          `tests skipped — likely a contacts account / capability / \`using\` misconfiguration.`,
+      });
+    }
   }
 
   // Teardown

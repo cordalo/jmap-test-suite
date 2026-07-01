@@ -158,3 +158,69 @@ Yes, literally "singleton".
 > **Q24.** (RFC 8621 S2) `Mailbox` has a `totalEmails` property and `Email/query` with `inMailbox` filter has `total` (via `calculateTotal`). Must these values be consistent within the same JMAP request? Or is eventual consistency acceptable (where `totalEmails` might briefly differ from a query's `total`)?
 
 Yes, they must be consistent. The state on the server is permitted to change between method calls. But assuming the state hasn't changed, they must match. So if you did Mailbox/get then Email/query then Mailbox/changes, if the /changes doesn't indicate a state change, they must match.
+
+---
+
+## Part 3: JMAP Contacts (RFC 9610 / JSContact RFC 9553)
+
+Interpretation decisions and spec-derived expected values the contacts tests rest
+on. Per the sprint's oracle discipline, expected values are taken from the RFCs
+here — never from an observed server response.
+
+### Capability, methods, and account
+
+- The contacts capability URN is `urn:ietf:params:jmap:contacts`; it must appear
+  in `using` for any `AddressBook/*` or `ContactCard/*` call. Contacts tests run on
+  the account resolved from `primaryAccounts["urn:ietf:params:jmap:contacts"]`,
+  falling back to the first account whose `accountCapabilities` advertise it — this
+  may differ from the mail account.
+- `AddressBook` defines exactly `get` / `changes` / `set` — there is **no**
+  `AddressBook/query` or `queryChanges`; a call to `AddressBook/query` is expected
+  to return method error `unknownMethod`. `ContactCard` defines `get` / `changes` /
+  `query` / `queryChanges` / `set` / `copy`.
+
+### AddressBook
+
+- Exactly one AddressBook per account has `isDefault: true` (RFC 9610 §2).
+- `name` is required, non-empty, ≤ 255 octets UTF-8; `description` defaults null;
+  `sortOrder` defaults 0. `id`, `isDefault`, and `myRights` are server-set and are
+  rejected if supplied on create.
+- Destroying a non-empty AddressBook with `onDestroyRemoveContents: false` is
+  rejected with the set-error `addressBookHasContents` (§2.3); with `true`, the
+  book and any otherwise-unreferenced cards are destroyed.
+- `myRights` is an AddressBookRights object with booleans
+  `mayRead` / `mayWrite` / `mayShare` / `mayDelete`. `shareWith` changes require the
+  `mayShare` right — sharing is server-optional, so its tests are SHOULD (WARN).
+
+### ContactCard / JSContact Card
+
+- A valid Card requires `@type: "Card"`, `version` (IANA-registered, `"1.0"`), and
+  `uid` (RFC 9553 §2.1). All other Card properties are optional; `kind` defaults to
+  `"individual"`.
+- `addressBookIds` is a non-empty map whose values are **all `true`** (RFC 9610 §3);
+  a card must belong to at least one AddressBook.
+- There MUST NOT be two ContactCards with the same `uid` in one account (§3) — a
+  colliding create is rejected.
+- `Organization` is valid with `name` **or** `units` (RFC 9553 §2.6.1) — do not
+  assert `name` is always present.
+
+### ContactCard/query
+
+- FilterConditions (RFC 9610 §3.3.1), AND-combined, any omitted default true:
+  `inAddressBook`, `uid`, `hasMember`, `kind`, `createdBefore`, `createdAfter`,
+  `updatedBefore`, `updatedAfter`, `text`, `name`, `name/given`, `name/surname`,
+  `name/surname2`, `nickname`, `organization`, `email`, `phone`, `onlineService`,
+  `address`, `note`. Text matching is case-insensitive; quoted text is a phrase,
+  unquoted whitespace separates tokens that must all be present.
+- Sort: `created` and `updated` are MUST; `name/given`, `name/surname`,
+  `name/surname2` are SHOULD (WARN). `created`/`updated` are server-assigned, so
+  time-window filters and sort assertions derive their expected order from the
+  values the seed reads back, never from hardcoded timestamps.
+
+### Media / photo
+
+- On write, a Media entry may carry a `blobId` instead of a `data:`/`uri` value; on
+  read the server returns the photo as a `blobId` **and** sets `mediaType`
+  (RFC 9610 §3). A server MUST reject a non-image blob set as a photo (§3.5) — that
+  test is `required:true`; a server that fails to reject is a conformance finding to
+  file, not a reason to downgrade the test.

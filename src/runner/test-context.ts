@@ -19,6 +19,21 @@ export class TestContext {
   /** Blob IDs uploaded during setup */
   public blobIds: Record<string, Id> = {};
 
+  /** The account id to use for contacts methods (undefined if not contacts-capable) */
+  public contactsAccountId?: string;
+
+  /** A second contacts-capable account accessible by the primary user (for ContactCard/copy) */
+  public contactsCrossAccountId?: string;
+
+  /** IDs of AddressBooks created during setup, keyed by name */
+  public addressBookIds: Record<string, Id> = {};
+
+  /** IDs of ContactCards created during setup, keyed by name */
+  public contactCardIds: Record<string, Id> = {};
+
+  /** Server-assigned created/updated per seeded ContactCard, keyed by name (for time-window filters/sorts) */
+  public contactCardMeta: Record<string, { created?: string; updated?: string }> = {};
+
   /** Identity IDs discovered/created */
   public identityIds: Id[] = [];
 

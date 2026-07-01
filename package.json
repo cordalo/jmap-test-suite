@@ -9,7 +9,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "test:unit": "tsc && node --test dist/tests/unit/*.test.js"
   },
   "devDependencies": {
     "@types/node": "^22.19.9",

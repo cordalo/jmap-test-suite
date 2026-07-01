@@ -1,10 +1,13 @@
 import type { TestContext } from "../runner/test-context.js";
+import { teardownContacts } from "./seed-contacts.js";
 
 /**
  * Clean up all test data created during the run.
  */
 export async function teardown(ctx: TestContext): Promise<void> {
   const { client, accountId } = ctx;
+
+  await teardownContacts(ctx);
 
   // Destroy all emails (query + destroy in batches)
   let hasMore = true;

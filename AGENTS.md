@@ -19,6 +19,10 @@ bun run ./src/cli.ts -c config-stalwart.json -f --filter 'copy,blob' --fail-only
 
 **CLI flags**: `-c <config>` (required), `-f` (force-clean), `-o <path>` (JSON output file), `--filter <pattern>` (glob or substring, comma-separated), `--verbose`, `--fail-only`.
 
+**Unit tests** (framework seams only): `npm run test:unit` — compiles then runs the
+`node:test` suites under `src/tests/unit/` (no server needed). These cover pure
+functions such as the capability/account resolvers that a live run can't reach.
+
 **Exit codes**: 0 = all required tests pass, 1 = required failures, 2 = fatal error.
 
 ## Directory structure
@@ -34,8 +38,9 @@ src/
 ├── helpers/
 │   └── smee.ts               # smee.io webhook proxy for push tests
 ├── setup/
-│   ├── clean-account.ts      # Wipe account before run
+│   ├── clean-account.ts      # Wipe account before run (mail + contacts)
 │   ├── seed-data.ts          # Create test mailboxes, emails, blobs
+│   ├── seed-contacts.ts      # Create test address books + contact cards (RFC 9610)
 │   └── teardown.ts           # Remove seeded data after run
 ├── reporter/
 │   ├── console-reporter.ts   # Colored terminal output (PASS/FAIL/WARN/SKIP)
@@ -55,7 +60,10 @@ src/
     ├── submission/           # EmailSubmission set (send, envelope, onSuccess)
     ├── vacation/             # VacationResponse get/set
     ├── push/                 # PushSubscription CRUD, EventSource
-    └── search-snippet/       # SearchSnippet get
+    ├── search-snippet/       # SearchSnippet get
+    ├── addressbook/          # AddressBook get/changes/set (RFC 9610)
+    ├── contacts/             # ContactCard get/changes/query/queryChanges/set/copy/media (RFC 9610 / 9553)
+    └── unit/                 # node:test unit tests for pure framework seams (run via `test:unit`)
 ```
 
 ## How tests work
@@ -151,6 +159,11 @@ Config files live in the project root (e.g., `config-stalwart.json`, `config-fas
 - No `filter: null` in Email/query calls — omit the property instead (some servers reject null).
 - HTTP status code assertions use range checks (`>= 400 && < 500`), not specific codes.
 - The `JmapMethodError` class wraps JMAP method-level errors thrown by `client.call()`.
+- Contacts (RFC 9610) tests are gated on `urn:ietf:params:jmap:contacts` via
+  `needsContacts` (`tests/contacts/_capability.ts`) and use `ctx.contactsAccountId`
+  (resolved independently of the mail account). If a contacts-capable server runs
+  but every contacts test skips, the runner fails the run (a misconfig guard).
+  Interpretation decisions live in `rfc-clarifications.md` Part 3.
 
 ## Reference documents
 
