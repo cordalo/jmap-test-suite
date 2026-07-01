@@ -56,6 +56,10 @@ import "./tests/contacts/contactcard-get.test.js";
 import "./tests/contacts/contactcard-changes.test.js";
 import "./tests/contacts/contactcard-query.test.js";
 import "./tests/contacts/contactcard-query-changes.test.js";
+import "./tests/contacts/contactcard-set-create.test.js";
+import "./tests/contacts/contactcard-set-update.test.js";
+import "./tests/contacts/contactcard-set-destroy.test.js";
+import "./tests/contacts/contactcard-copy.test.js";
 
 async function main() {
   const { values } = parseArgs({
