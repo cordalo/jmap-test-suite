@@ -5,3 +5,4 @@ dist
 package-lock.json
 config-*.json
 !config.example.json
+_handoff/
