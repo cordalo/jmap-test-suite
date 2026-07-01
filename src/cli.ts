@@ -49,6 +49,9 @@ import "./tests/vacation/vacation-get.test.js";
 import "./tests/vacation/vacation-set.test.js";
 import "./tests/push/push-subscription.test.js";
 import "./tests/push/event-source.test.js";
+import "./tests/addressbook/addressbook-get.test.js";
+import "./tests/addressbook/addressbook-changes.test.js";
+import "./tests/addressbook/addressbook-set.test.js";
 
 async function main() {
   const { values } = parseArgs({
