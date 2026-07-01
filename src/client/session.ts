@@ -50,24 +50,51 @@ function validateSession(session: Session): void {
   }
 }
 
+/**
+ * Resolve the account id to use for a capability: the primary account for it if
+ * declared, else the first account whose accountCapabilities advertise it.
+ * Throws if the session exposes no account for the capability at all.
+ */
+export function getAccountId(session: Session, capability: string): string {
+  const primary = session.primaryAccounts[capability];
+  if (primary) {
+    if (!session.accounts[primary]) {
+      throw new Error(
+        `Primary account ${primary} for ${capability} not found in session accounts`
+      );
+    }
+    return primary;
+  }
+
+  // Fallback: scan accounts for one that advertises the capability.
+  for (const [acctId, acct] of Object.entries(session.accounts)) {
+    if (capability in acct.accountCapabilities) {
+      return acctId;
+    }
+  }
+
+  throw new Error(`No account found for capability ${capability}`);
+}
+
 export function getMailAccountId(session: Session): string {
-  const accountId =
-    session.primaryAccounts["urn:ietf:params:jmap:mail"];
+  return getAccountId(session, "urn:ietf:params:jmap:mail");
+}
 
-  if (!accountId) {
-    throw new Error(
-      "No primary account for urn:ietf:params:jmap:mail capability"
-    );
+/**
+ * The id of an account (other than `excludeAccountId`) that advertises the given
+ * capability, if any — used to locate a cross-account target for /copy tests.
+ */
+export function findCrossAccountId(
+  session: Session,
+  capability: string,
+  excludeAccountId: string
+): string | undefined {
+  for (const [acctId, acct] of Object.entries(session.accounts)) {
+    if (acctId !== excludeAccountId && capability in acct.accountCapabilities) {
+      return acctId;
+    }
   }
-
-  const account = session.accounts[accountId];
-  if (!account) {
-    throw new Error(
-      `Primary mail account ${accountId} not found in session accounts`
-    );
-  }
-
-  return accountId;
+  return undefined;
 }
 
 export function hasCapability(session: Session, capability: string): boolean {

@@ -228,6 +228,9 @@ export class JmapClient {
     if (this.session.capabilities["urn:ietf:params:jmap:vacationresponse"]) {
       using.push("urn:ietf:params:jmap:vacationresponse");
     }
+    if (this.session.capabilities["urn:ietf:params:jmap:contacts"]) {
+      using.push("urn:ietf:params:jmap:contacts");
+    }
     return using;
   }
 
